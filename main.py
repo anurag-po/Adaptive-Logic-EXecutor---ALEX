@@ -219,6 +219,13 @@ class AssistantWorker:
         self.tts.speak(text)
         set_state(AssistantState.IDLE)
 
+    # -- Text Input ------------------------------------------------
+    
+    def handle_text_input(self, text: str):
+        """Handle text input from the overlay UI in a background thread."""
+        t = threading.Thread(target=self.process_input, args=(text,), daemon=True)
+        t.start()
+
     # -- Voice Input -----------------------------------------------
 
     def handle_voice_input(self):
@@ -408,7 +415,7 @@ def main():
     console_thread.start()
 
     # Launch overlay UI in main thread
-    app, overlay = launch_overlay_app(audio_fft_queue, state_queue)
+    app, overlay = launch_overlay_app(audio_fft_queue, state_queue, text_callback=worker.handle_text_input)
 
     # Create and attach dashboard panel (Phase 3)
     from ui.dashboard import DashboardPanel
