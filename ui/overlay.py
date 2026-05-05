@@ -16,7 +16,7 @@ import numpy as np
 from enum import Enum
 from queue import Queue, Empty
 
-from PyQt6.QtWidgets import QApplication, QWidget, QMenu
+from PyQt6.QtWidgets import QApplication, QWidget, QMenu, QLineEdit
 from PyQt6.QtCore import Qt, QTimer, QPointF, QRectF
 from PyQt6.QtGui import (
     QPainter, QRadialGradient, QLinearGradient,
@@ -42,7 +42,7 @@ SPHERE_COLORS = [
 
 class AlexOverlay(QWidget):
     WIN_W = 700
-    WIN_H = 200
+    WIN_H = 260
     SPHERE_R = 18
     SPHERE_SPACING = 52
     DOT_R = 2
@@ -51,10 +51,11 @@ class AlexOverlay(QWidget):
     BREATH_PERIOD = 4.0
     EMA_ALPHA = 0.25
 
-    def __init__(self, audio_queue: Queue, state_queue: Queue):
+    def __init__(self, audio_queue: Queue, state_queue: Queue, text_callback=None):
         super().__init__()
         self.audio_queue = audio_queue
         self.state_queue = state_queue
+        self.text_callback = text_callback
         self.state = AssistantState.IDLE
         self._prev_state = AssistantState.IDLE
 
@@ -96,6 +97,27 @@ class AlexOverlay(QWidget):
         self.anim_timer = QTimer(self)
         self.anim_timer.timeout.connect(self._tick)
         self.anim_timer.start(16)
+
+        # Text Input
+        self.text_input = QLineEdit(self)
+        self.text_input.setGeometry(20, 215, self.WIN_W - 40, 30)
+        self.text_input.setStyleSheet("""
+            QLineEdit {
+                background: transparent;
+                color: #e0e0e0;
+                border: none;
+                font-family: 'Segoe UI';
+                font-size: 15px;
+            }
+        """)
+        self.text_input.setPlaceholderText("Type a command and press Enter...")
+        self.text_input.returnPressed.connect(self._on_text_entered)
+
+    def _on_text_entered(self):
+        text = self.text_input.text().strip()
+        if text and self.text_callback:
+            self.text_callback(text)
+            self.text_input.clear()
 
     def set_dashboard(self, dashboard):
         self._dashboard = dashboard
@@ -173,7 +195,16 @@ class AlexOverlay(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        cx, cy = self.width() / 2, self.height() * 0.6
+        
+        # Draw the black rounded rectangles for the UI
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(8, 8, 12, 240))
+        # Voice UI rect (top)
+        p.drawRoundedRect(0, 0, self.WIN_W, 200, 20, 20)
+        # Text UI rect (bottom)
+        p.drawRoundedRect(0, 210, self.WIN_W, 40, 15, 15)
+
+        cx, cy = self.width() / 2, 200 * 0.6
 
         # Collapsing back to idle
         if self._transitioning and self._transition_dir == -1:
@@ -284,7 +315,7 @@ class AlexOverlay(QWidget):
             self._draw_shadow_sphere(p, sx, sy, r, col, alpha)
 
         # Bottom reflection
-        self._draw_bottom_reflection(p, cx, self.height())
+        self._draw_bottom_reflection(p, cx, 200)
 
         # Thinking text
         dots = "." * (1 + int(self.time * 2) % 3)
@@ -309,7 +340,7 @@ class AlexOverlay(QWidget):
             alpha = int(160 + 80 * beat)
             self._draw_shadow_sphere(p, sx, cy, r, col, alpha)
 
-        self._draw_bottom_reflection(p, cx, self.height())
+        self._draw_bottom_reflection(p, cx, 200)
 
     # -- SHARED: Sphere with drop shadow (no glow) -----------------
 
@@ -429,13 +460,13 @@ class AlexOverlay(QWidget):
 # PUBLIC LAUNCHER
 # ═══════════════════════════════════════════════════════════════════
 
-def create_overlay(audio_queue: Queue, state_queue: Queue):
-    overlay = AlexOverlay(audio_queue, state_queue)
+def create_overlay(audio_queue: Queue, state_queue: Queue, text_callback=None):
+    overlay = AlexOverlay(audio_queue, state_queue, text_callback)
     overlay.show()
     return overlay
 
 
-def launch_overlay_app(audio_queue: Queue, state_queue: Queue):
+def launch_overlay_app(audio_queue: Queue, state_queue: Queue, text_callback=None):
     app = QApplication.instance() or QApplication(sys.argv)
-    overlay = create_overlay(audio_queue, state_queue)
+    overlay = create_overlay(audio_queue, state_queue, text_callback)
     return app, overlay
