@@ -2,6 +2,8 @@
 
 > [!WARNING]
 > **Main.exe must be run exactly where you want ALEX to exist (ALL FILES WILL BE STORED TOGETHER WHERE MAIN.exe will be**
+
+---
 ALEX is a modular voice + text AI execution assistant built in Python, powered by Groq-hosted open-source LLMs. It converts natural language into structured system actions and executes them safely through a strict, deterministic pipeline.
 
 Unlike traditional assistants, ALEX doesn’t just respond—it **acts**.
