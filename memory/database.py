@@ -27,7 +27,7 @@ class MemoryDB:
     """
 
     def __init__(self, db_path: str = None):
-        self._db_path = db_path or config.DB_PATH
+        self._db_path = db_path or config.MEMORY_DB_PATH
         os.makedirs(os.path.dirname(self._db_path), exist_ok=True)
         self._init_schema()
         self._cleanup_old_records()
